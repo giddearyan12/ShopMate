@@ -1,16 +1,18 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext"; // import context
 
 const Login = () => {
     const [formData, setFormData] = useState({
         email: "",
         password: "",
     });
+
     const [errors, setErrors] = useState({});
-    const [success, setSuccess] = useState("");
     const [apiError, setApiError] = useState("");
 
-    const navigate = useNavigate(); // For navigation
+    const navigate = useNavigate();
+    const { login } = useAuth(); // get login function
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -31,41 +33,45 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setApiError(""); // Reset API error
+        setApiError("");
+
         const validationErrors = validate();
         if (Object.keys(validationErrors).length > 0) {
             setErrors(validationErrors);
-            setSuccess("");
-        } else {
-            setErrors({});
-            try {
-                const response = await fetch("http://localhost:8080/api/users/login", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify(formData),
-                });
+            return;
+        }
 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.message || "Login failed");
-                }
+        setErrors({});
 
-                const data = await response.json();
-                setSuccess("Login Successful!");
-                
-                // Optionally save JWT/token in localStorage
-                if (data.token) {
-                    localStorage.setItem("token", data.token);
-                }
+        try {
+            const response = await fetch("http://localhost:8080/api/users/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+            });
 
-                // Navigate to home page
-                navigate("/home");
-            } catch (err) {
-                setApiError(err.message);
-                setSuccess("");
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Login failed");
             }
+
+            const data = await response.json();
+
+            // Save using AuthContext
+            login(
+                {
+                    id: data.id,
+                    name: data.name,
+                    email: data.email,
+                    phone: data.phone,
+                },
+                data.token
+            );
+
+            navigate("/home");
+
+        } catch (err) {
+            setApiError(err.message);
         }
     };
 
@@ -73,8 +79,8 @@ const Login = () => {
         <div className="min-h-screen flex items-center justify-center bg-grey-100">
             <div className="bg-white p-10 rounded-lg shadow-lg w-full max-w-lg">
                 <div className="flex justify-center mb-5">
-                    <h1 className="text-4xl font-extrabold bg-gradient-to-br from-indigo-700 via-purple-700 to-pink-600 
-                 bg-clip-text text-transparent">
+                    <h1 className="text-4xl font-extrabold bg-gradient-to-br 
+                        from-indigo-700 via-purple-700 to-pink-600 bg-clip-text text-transparent">
                         ShopMate
                     </h1>
                 </div>
@@ -93,7 +99,8 @@ const Login = () => {
                                 value={formData.email}
                                 onChange={handleChange}
                                 placeholder="Your Email"
-                                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                className="w-full px-4 py-2 border rounded-md 
+                                focus:outline-none focus:ring-2 focus:ring-indigo-400"
                             />
                             {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                         </div>
@@ -106,17 +113,17 @@ const Login = () => {
                                 value={formData.password}
                                 onChange={handleChange}
                                 placeholder="Your Password"
-                                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                className="w-full px-4 py-2 border rounded-md 
+                                focus:outline-none focus:ring-2 focus:ring-indigo-400"
                             />
-                            {errors.password && (
-                                <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-                            )}
+                            {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
                         </div>
                     </div>
 
                     <button
                         type="submit"
-                        className="w-full bg-indigo-600 text-white py-2 rounded-md font-semibold hover:bg-indigo-700 transition duration-300"
+                        className="w-full bg-indigo-600 text-white py-2 rounded-md font-semibold 
+                        hover:bg-indigo-700 transition duration-300"
                     >
                         Login
                     </button>
@@ -127,8 +134,10 @@ const Login = () => {
                             Register
                         </Link>
                     </p>
+                    <p className="text-center text-sm text-gray-600 mt-2">
+                        Are you an admin? <Link to="/admin/login" className="text-indigo-600 hover:underline">Admin Login</Link>
+                    </p>
 
-                    {success && <p className="text-green-500 text-center mt-3">{success}</p>}
                     {apiError && <p className="text-red-500 text-center mt-3">{apiError}</p>}
                 </form>
             </div>
